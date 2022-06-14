@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
-project (219)
+project (ctut)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(219 main.cpp)
+add_executable(ctut main.cpp test_runner.h test_invocable_concept.h test_fixture.h)
