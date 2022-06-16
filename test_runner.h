@@ -8,6 +8,7 @@
 #include "test_invocable_concept.h"
 #include "test_fixture.h"
 #include <array>
+#include <algorithm>
 
 namespace lib {
     inline namespace v_1 { // for ABI protections
@@ -42,16 +43,12 @@ namespace lib {
 
             [[nodiscard("test results")]] consteval auto run_test(auto &&...pack) const noexcept {
                 std::array<test_data_enum, array_size> result{};
-
-                auto result_itr = result.begin();
-                auto element_itr = elements.begin();
-                while (result_itr != result.end() && element_itr != elements.end()) {
-                    if (*element_itr) {
-                        const auto r = std::invoke(*element_itr, pack...);
-                        *result_itr = r ? test_data_enum::passed : test_data_enum::failed;
-                    } else *result_itr = test_data_enum::untested;
-                    result_itr++;
-                    element_itr++;
+                if constexpr(std::is_constant_evaluated()) {
+                    std::transform(elements.begin(), elements.end(), result.begin(), [pack...](auto & function)->test_data_enum{
+                        if(function != nullptr)
+                            return function(pack...) ? test_data_enum::passed : test_data_enum::failed;
+                        return test_data_enum::untested;
+                    });
                 }
                 return result;
             }
