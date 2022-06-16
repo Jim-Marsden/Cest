@@ -52,27 +52,28 @@ int main() {
     }
 
     constexpr static lib::Tests<bool (*)(int)> test_manager{sanity_check, sanity_check_new_delete,
-//                                                            sanity_check_fail,
-//        memory_leak,
-//        out_of_bounds_test,
-//        overflow_test,
-        +([](int){return true;})
+//
     };
 
-
-
-    const auto test_results = test_manager.run_test(3);
-
-    int tests_passed{};
-    int tests_failed{};
-    for (auto const &e: test_results) {
-        if (e == lib::test_data_enum::passed) {
-            tests_passed++;
-        } else if (e == lib::test_data_enum::failed) {
-            tests_failed++;
-        }
+    {
+        auto r  = lib::v_3::run_single_test(sanity_check, std::source_location::current(), 9);
+        std::cout << r << '\n';
     }
-    std::cout << "Passed: " << tests_passed << "\tFailed: " << tests_failed << "\t total: " << test_results.size();
 
+    {
+
+        const auto test_results = test_manager.run_test(3);
+
+        int tests_passed{};
+        int tests_failed{};
+        for (auto const &e: test_results) {
+            if (e == lib::test_data_enum::passed) {
+                tests_passed++;
+            } else if (e == lib::test_data_enum::failed) {
+                tests_failed++;
+            }
+        }
+        std::cout << "Passed: " << tests_passed << "\tFailed: " << tests_failed << "\t total: " << test_results.size();
+    }
     return 0;
 }
