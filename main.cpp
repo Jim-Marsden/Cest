@@ -1,6 +1,7 @@
-#include "test_runner.h"
 #include <numeric>
 #include <iostream>
+
+#include "test_runner.h"
 
 constexpr bool sanity_check(int) { return true; }
 
@@ -11,7 +12,6 @@ constexpr bool overflow_test(int) {
     max = max + max + 1;
     return max > std::numeric_limits<int>::max();
 }
-
 
 constexpr bool out_of_bounds_test(int) {
     try {
@@ -29,7 +29,6 @@ constexpr bool sanity_check_new_delete(int) {
     return true;
 }
 
-
 constexpr bool memory_leak(int) {
     int *i = new int;
     return true;
@@ -37,43 +36,24 @@ constexpr bool memory_leak(int) {
 
 int main() {
 
-    {
-        std::array check{
-                memory_leak(0),
-//                out_of_bounds_test(0),
-                overflow_test(0),
-        };
-        std::cout << "Proof that it works in non compile time\n";
-        int counter{};
-        for(auto const & e : check){
-            std::cout << "element: " << counter++ << ' ' << e <<'\n';
-        }
 
+    using function_t = bool (*)(int);
+
+    constexpr auto r2 = lib::run_multi_test(std::array{
+            lib::fixture<function_t>{sanity_check, "Sanity check"},
+            lib::fixture<function_t>{sanity_check_fail, "Sanity check fail"},
+            lib::fixture<function_t>{sanity_check_new_delete, "Sanity check new/delete"},
+//            lib::fixture<function_t>{overflow_test, "overflow test"},
+//            lib::fixture<function_t>{out_of_bounds_test, "Out of bounds (Bad test)"},
+//            lib::fixture<function_t>{memory_leak, "Memeory Leak"},
+    }, 0);
+
+    for (auto const &[e1, e2, e3]: r2) {
+
+        std::cout << "Test name: " << e2 << '\t';
+        if (e3 == lib::test_data_enum::passed) std::cout << "test passed \n";
+        else if (e3 == lib::test_data_enum::failed) std::cout << "test failed\n";
     }
-
-    constexpr static lib::Tests<bool (*)(int)> test_manager{sanity_check, sanity_check_new_delete,
-//
-    };
-
-    {
-        auto r  = lib::v_3::run_single_test(sanity_check, std::source_location::current(), 9);
-        std::cout << r << '\n';
-    }
-
-    {
-
-        const auto test_results = test_manager.run_test(3);
-
-        int tests_passed{};
-        int tests_failed{};
-        for (auto const &e: test_results) {
-            if (e == lib::test_data_enum::passed) {
-                tests_passed++;
-            } else if (e == lib::test_data_enum::failed) {
-                tests_failed++;
-            }
-        }
-        std::cout << "Passed: " << tests_passed << "\tFailed: " << tests_failed << "\t total: " << test_results.size();
-    }
+    std::cout << r2.size() << '\n';
     return 0;
 }

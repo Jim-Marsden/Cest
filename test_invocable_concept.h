@@ -7,8 +7,8 @@
 
 #include <concepts>
 namespace lib {
-    inline namespace v_0 { // for ABI protections
 
+    inline namespace ctut_1_0{
         template<typename Type, typename ... Parameter_Pack>
         concept TestableAndCallable = requires(Type object, Parameter_Pack &&... parameterPack)
         {

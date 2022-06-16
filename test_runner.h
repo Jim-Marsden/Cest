@@ -7,108 +7,56 @@
 
 #include "test_invocable_concept.h"
 #include "test_fixture.h"
+#include "fixture_conecept.h"
 #include <array>
 #include <algorithm>
-#include <source_location>
 #include <iostream>
 
 namespace lib {
 
-    namespace v_3{
-        namespace {
-            constexpr bool run_single_test_ceval(TestableAndCallable auto function, auto && ... args){
+    inline namespace ctut_1_0 {
+
+
+        namespace private_ns {
+            constexpr bool run_single_test_ceval(TestableAndCallable auto function, auto &&... args) {
                 return function(args...);
             }
         }
-        constexpr bool run_single_test(TestableAndCallable auto function, std::source_location location, auto && ... args){
+
+        constexpr bool run_single_test(Fixture_Concept auto fixture, auto &&... args) {
+            using private_ns::run_single_test_ceval;
             if (std::is_constant_evaluated()) {
-                return run_single_test_ceval(function, args...);
-            }
-            else {
+                return run_single_test_ceval(fixture.function, args...);
+            } else {
                 std::cout << "Not ran as a constant expression... \n";
-                if(auto r = run_single_test_ceval(function, args...); r ) {
-                    std::cout << "file: "
-                              << location.file_name() << "("
-                              << location.line() << ":"
-                              << location.column() << ") `"
-                              << location.function_name() << "passed!\n";
+                if (auto r = run_single_test_ceval(fixture.function, args...); r) {
+                    std::cout << "Test " << fixture.test_name << " passed!\n";
                     return r;
-                }
-                else{
+                } else {
                     std::cout << "test failed :c\n";
                     return r;
                 }
             }
         }
-    }
-    namespace v_2{
 
-        template<class T, auto S = 0xff>
-        using Test_Containers = std::array<fixture<T>, S>;
+        template<class Fixture_T, auto size>
+        constexpr auto run_multi_test(std::array<Fixture_T, size> const &container, auto &&... args) {
 
-        template <TestableAndCallable Function_T, std::size_t Size = 0xff, class ... Aggs_T>
-        consteval auto run_tests(Test_Containers<Function_T, Size> const &functions, Aggs_T && ... args){
+            std::remove_cvref_t<decltype(container)> result;
+//            std::array<fixture<Function::function>, size> result{};
+            auto end = container.end();
+            if (size < container.size()) end = container.begin() + size;
 
-            std::array<test_data_enum, Size> result{};
+            std::transform(container.begin(), end, result.begin(),
+                           [&args...](Fixture_Concept auto &lfixture) -> Fixture_T {
 
-            functions.front().function(args...);
-
-//            if constexpr(std::is_constant_evaluated()) {
-//                std::transform(functions.begin(), functions.end(), result.begin(), [&args...](fixture<Function_T> function)->test_data_enum{
-//                    //if(function != nullptr) return function(args...) ? test_data_enum::passed : test_data_enum::failed;
-//
-//                    return test_data_enum::untested;
-////                    if(function.function != nullptr) // temp solution to what seems to be an issue on msvc with constexpr.
-////                        return{};//return function.function(args...) ? test_data_enum::passed : test_data_enum::failed;
-////                    return test_data_enum::untested;
-//                });
-//            }
+                               return {lfixture.function, lfixture.test_name,
+                                       private_ns::run_single_test_ceval(lfixture.function, args...)
+                                       ? test_data_enum::passed : test_data_enum::failed};
+                           });
             return result;
         }
-    }
-    inline namespace v_1 { // for ABI protections
 
-        template<TestableAndCallable  test_function, auto array_size = 0xff>
-        class Tests {
-            std::array<test_function, array_size> elements{};
-        public:
-            constexpr Tests() = default;
-
-            constexpr Tests(Tests const &) = default;
-
-            constexpr Tests(Tests &&) noexcept = default;
-
-            constexpr ~Tests() = default;
-
-            constexpr Tests &operator=(Tests const &) = default;
-
-            constexpr Tests &operator=(Tests &&) noexcept = default;
-
-            explicit constexpr Tests(TestableAndCallable auto &&... functions): elements{functions ...} {}
-
-            constexpr auto add_test(test_function const &testFunction) -> bool {
-                for (auto &element: elements) {
-                    if (!element) {
-                        element = testFunction;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            [[nodiscard("test results")]] consteval auto run_test(auto &&...pack) const noexcept {
-                std::array<test_data_enum, array_size> result{};
-                if constexpr(std::is_constant_evaluated()) {
-                    std::transform(elements.begin(), elements.end(), result.begin(), [pack...](auto & function)->test_data_enum{
-                        if(function != nullptr) // temp solution to what seems to be an issue on msvc with constexpr.
-                            return function(pack...) ? test_data_enum::passed : test_data_enum::failed;
-                        return test_data_enum::untested;
-                    });
-                }
-                return result;
-            }
-
-        };
     } // inline namespace v_1
 } // namespace lib
 
